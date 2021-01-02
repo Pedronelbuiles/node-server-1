@@ -2,10 +2,11 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const _ = require('underscore')
 const Usuario = require('../models/usuario')
+const { verificarToken, verificarAdmin_Role } = require('../middlewares/autentacacion')
 
 const app = express()
 
-app.get('/usuario', function (req, res) {
+app.get('/usuario', verificarToken, (req, res) => {
     let desde = Number(req.query.desde || 0)
     let limite = Number(req.query.limite || 5)
     let filtros = { estado: true }
@@ -16,10 +17,12 @@ app.get('/usuario', function (req, res) {
             if(err){
                 return res.status(400).json({
                   ok: false,
-                  err
+                  err: {
+                      message: 'El token no es valido'
+                  }
                 })
             }
-            Usuario.count(filtros, (err, cantidad) => {
+            Usuario.countDocuments(filtros, (err, cantidad) => {
                 res.json({
                     ok:true,
                     usuarios,
@@ -29,7 +32,7 @@ app.get('/usuario', function (req, res) {
         })
   })
    
-  app.post('/usuario', function (req, res) {
+  app.post('/usuario', [verificarToken, verificarAdmin_Role], (req, res) => {
       let body = req.body
 
       let usuario = new Usuario({
@@ -53,7 +56,7 @@ app.get('/usuario', function (req, res) {
       })
   })
   
-  app.put('/usuario/:id', function (req, res) {
+  app.put('/usuario/:id', [verificarToken, verificarAdmin_Role], (req, res) => {
       let id = req.params.id
       let body = _.pick(req.body, ['nombre','email','img','role','estado'])
       
@@ -71,7 +74,7 @@ app.get('/usuario', function (req, res) {
       })
   })
   
-  app.delete('/usuario/:id', function (req, res) {
+  app.delete('/usuario/:id', [verificarToken, verificarAdmin_Role], (req, res) => {
       let id = req.params.id
       Usuario.findByIdAndUpdate(id,{ estado: false },{ new:true } ,(err,usuarioBorrado) => {
         if(err){
